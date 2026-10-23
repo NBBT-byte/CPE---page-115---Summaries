@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Put the chunks in order</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--text:#1d2433;--muted:#5d6678;--border:#cfd5e3;--accent:#3b5bdb;--accent-t:#fff;--tile:#eef2ff;--tile-b:#b6c3f5;--zone:#f9fafd;--ok:#1b7a43;--okbg:#dff5e8;--bad:#b42318;--badbg:#fde4e1;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151c;--card:#1b202b;--text:#e8ebf3;--muted:#a1a9ba;--border:#37405a;--accent:#7c9bff;--accent-t:#10151f;--tile:#27304a;--tile-b:#4a5a8f;--zone:#161a24;--ok:#7fe0a5;--okbg:#17382a;--bad:#ff9a8f;--badbg:#44211e}}
+:root[data-theme="dark"]{--bg:#12151c;--card:#1b202b;--text:#e8ebf3;--muted:#a1a9ba;--border:#37405a;--accent:#7c9bff;--accent-t:#10151f;--tile:#27304a;--tile-b:#4a5a8f;--zone:#161a24;--ok:#7fe0a5;--okbg:#17382a;--bad:#ff9a8f;--badbg:#44211e}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.6rem;margin:0 0 6px}
+.sub{color:var(--muted);margin:0 0 14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+#score{font-weight:600}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px 16px;margin-bottom:16px}
+.num{font-weight:700;color:var(--accent);margin-bottom:8px}
+.zone{display:flex;flex-wrap:wrap;gap:8px;padding:10px;border-radius:10px;min-height:58px;align-content:flex-start;border:2px solid transparent}
+.ans{border:2px dashed var(--border);background:var(--zone);margin-bottom:10px}
+.ans:empty::before{content:attr(data-ph);color:var(--muted);font-size:.92rem;align-self:center}
+.zone.over{border-color:var(--accent)}
+.tile{padding:8px 12px;border-radius:8px;background:var(--tile);border:1px solid var(--tile-b);cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;color:var(--text)}
+.tile.ok{background:var(--okbg);border-color:var(--ok);color:var(--ok)}
+.tile.bad{background:var(--badbg);border-color:var(--bad);color:var(--bad)}
+.tile.ghost{position:fixed;z-index:1000;pointer-events:none;box-shadow:0 8px 22px rgba(0,0,0,.3);cursor:grabbing}
+.tile.lift{opacity:.3}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+button{font:inherit;min-height:40px;padding:0 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-t);cursor:pointer}
+button.sec{background:transparent;color:var(--accent)}
+.msg{color:var(--muted);font-size:.95rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Put the chunks in order</h1>
+<p class="sub">Each sentence summarises one main point from one of two texts about conservation. Drag the chunks into the dashed box to rebuild the sentence. On a phone you can also tap a chunk to move it in or out.</p>
+<div class="top"><span id="score"></span><button class="sec" id="all">Start over</button></div>
+<div id="app"></div>
+</main>
+<script>
+const L=["Sentence 1","Sentence 2","Sentence 3","Sentence 4"];
+const S=[
+["Many conservationists think","resources should shift","from famous species,","like the polar bear,","to those more likely","to survive."],
+["Protecting tiger habitats","also benefits humans","by reducing erosion,","stabilising ecosystems","and raising awareness","of climate change."],
+["Some experts say","choosing between species is impossible","given ecological complexity;","others question","spending millions","on species like pandas."],
+["as a keystone species,","tigers","sustain their ecosystems,","so losing them","would seriously harm","many other species."]];
+const app=document.getElementById("app");
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const mix=n=>{const ids=[...Array(n).keys()];let b;do{b=shuffle(ids)}while(n>1&&b.every((x,i)=>x===i));return b};
+const cards=S.map(s=>{const t=s.map((w,id)=>({id,w}));return{t,bank:mix(t.length),ans:[],res:null,ok:false,msg:""}});
+app.innerHTML=cards.map((c,i)=>`<section class="card" id="c${i}" data-i="${i}"><div class="num">${L[i]}</div><div class="zone ans" data-z="ans" data-ph="Drop the chunks here in order"></div><div class="zone bank" data-z="bank"></div><div class="row"><button data-a="check">Check</button><button class="sec" data-a="show">Show answer</button><button class="sec" data-a="reset">Reset</button><span class="msg" role="status"></span></div></section>`).join("");
+const th=(c,id)=>`<span class="tile ${c.res&&c.res[id]||""}" data-id="${id}">${c.t[id].w}</span>`;
+function score(){document.getElementById("score").textContent=cards.filter(c=>c.ok).length+" / "+cards.length+" correct"}
+function draw(i){const c=cards[i],el=document.getElementById("c"+i);el.querySelector(".ans").innerHTML=c.ans.map(id=>th(c,id)).join("");el.querySelector(".bank").innerHTML=c.bank.map(id=>th(c,id)).join("");el.querySelector(".msg").textContent=c.msg;score()}
+const clear=c=>{c.res=null;c.ok=false;c.msg=""};
+function resetCard(i){const c=cards[i];c.bank=mix(c.t.length);c.ans=[];clear(c);draw(i)}
+cards.forEach((_,i)=>draw(i));
+document.getElementById("all").onclick=()=>cards.forEach((_,i)=>resetCard(i));
+app.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const i=+b.closest(".card").dataset.i,c=cards[i];
+ if(b.dataset.a==="reset")return resetCard(i);
+ if(b.dataset.a==="show"){c.ans=c.t.map(x=>x.id);c.bank=[];clear(c);c.msg="Solution shown.";return draw(i)}
+ if(c.ans.length<c.t.length){clear(c);c.msg="Place all the chunks first.";return draw(i)}
+ c.res={};c.ok=true;c.ans.forEach((id,k)=>{const g=c.t[id].w===c.t[k].w;c.res[id]=g?"ok":"bad";if(!g)c.ok=false});
+ c.msg=c.ok?"Correct!":"Not quite. The red chunks are in the wrong place.";draw(i)});
+let d=null;
+function zoneAt(e){const el=document.elementFromPoint(e.clientX,e.clientY),z=el&&el.closest(".zone");return z&&z.closest(".card").dataset.i==d.i?z:null}
+function insIdx(z,e,id){const ts=[...z.querySelectorAll(".tile")].filter(t=>+t.dataset.id!==id);for(let j=0;j<ts.length;j++){const r=ts[j].getBoundingClientRect();if(e.clientY<r.bottom&&e.clientX<r.left+r.width/2)return j}return ts.length}
+app.addEventListener("pointerdown",e=>{const t=e.target.closest(".tile");if(!t||d||e.button>0)return;e.preventDefault();d={t,i:+t.closest(".card").dataset.i,id:+t.dataset.id,x:e.clientX,y:e.clientY,on:false,g:null}});
+addEventListener("pointermove",e=>{if(!d)return;
+ if(!d.on){if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<6)return;d.on=true;const r=d.t.getBoundingClientRect();d.g=d.t.cloneNode(true);d.g.classList.add("ghost");d.g.style.width=r.width+"px";document.body.appendChild(d.g);d.t.classList.add("lift")}
+ d.g.style.left=e.clientX-d.g.offsetWidth/2+"px";d.g.style.top=e.clientY-d.g.offsetHeight/2+"px";
+ document.querySelectorAll(".zone.over").forEach(x=>x.classList.remove("over"));const z=zoneAt(e);if(z)z.classList.add("over")});
+addEventListener("pointerup",e=>{if(!d)return;const c=cards[d.i],id=d.id,i=d.i;
+ if(!d.on){const inBank=c.bank.includes(id);c.bank=c.bank.filter(x=>x!==id);c.ans=c.ans.filter(x=>x!==id);(inBank?c.ans:c.bank).push(id);clear(c)}
+ else{const z=zoneAt(e);d.g.remove();document.querySelectorAll(".zone.over").forEach(x=>x.classList.remove("over"));
+  if(z){c.bank=c.bank.filter(x=>x!==id);c.ans=c.ans.filter(x=>x!==id);if(z.dataset.z==="bank")c.bank.push(id);else c.ans.splice(insIdx(z,e,id),0,id);clear(c)}}
+ d=null;draw(i)});
+addEventListener("pointercancel",()=>{if(!d)return;if(d.g)d.g.remove();const i=d.i;d=null;draw(i)});
+</script>
+</body>
+</html>
